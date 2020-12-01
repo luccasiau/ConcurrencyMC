@@ -21,8 +21,8 @@ MODULE main
 VAR
   turn: 0..2;
   flag: array 0..1 of boolean;
-  p0: process peterson_lock(0, flag, turn);
-  p1: process peterson_lock(1, flag, turn);
+  p0: process peterson(0, flag, turn);
+  p1: process peterson(1, flag, turn);
 ASSIGN
   init(turn) := 2;
   init(flag[0]) := FALSE;
@@ -47,7 +47,7 @@ CTLSPEC AG((p1.line=3) -> (AF(p1.line=4)));
 -------------------------------------------------------------------------------
 
 ---------------------------------- PROCESS ------------------------------------
-MODULE peterson_lock(p_id, flag, turn)
+MODULE peterson(p_id, flag, turn)
  -- Following the same style as assignment 5b
 VAR
   line: 1..6;
