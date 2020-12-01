@@ -1,0 +1,75 @@
+------------------------------ DRAFTS AND NOTES -------------------------------
+-- Peterson's algorithm:
+-- Source: https://en.wikipedia.org/wiki/Peterson%27s_algorithm
+--
+-- Global variables:
+-- -- flag: array initialized to {false, false}
+-- -- turn: variable initialize to 2
+--
+-- Peterson lock process
+-- Process P_id
+-- 1: flag[id] := 1
+-- 2: turn := 1-id;
+-- 3: if (flag[1-id] == true) & (turn == (1-id)) goto 3
+-- 4: /* critical section */
+-- 5: flag[id] := 0
+-- 6 : goto 1 (start process again)
+-------------------------------------------------------------------------------
+
+------------------------------------ MAIN -------------------------------------
+MODULE main
+VAR
+  turn: 0..2;
+  flag: array 0..1 of boolean;
+  p0: process peterson_lock(0, flag, turn);
+  p1: process peterson_lock(1, flag, turn);
+ASSIGN
+  init(turn) := 2;
+  init(flag[0]) := FALSE;
+  init(flag[1]) := FALSE; 
+-------------------------------------------------------------------------------
+
+------------------------------- ALL CONSTRAINTS -------------------------------
+-------------------------------------------------------------------------------
+
+---------------------------------- PROCESS ------------------------------------
+MODULE peterson_lock(p_id, flag, turn)
+ -- Following the same style as assignment 5b
+VAR
+  line: 1..6;
+ASSIGN
+  init(line) := 1;
+ 
+  -- Decide which line to execute next
+  next(line) :=
+    case
+      (line=1) : line+1;
+      (line=2) : line+1;
+      (line=3) & (flag[1-p_id]) & (turn=(1-p_id)) : 3;
+      (line=3) : 4;
+      (line=4) : {4, 5};
+      (line=5) : {5, 6};
+      (line=6) : 1;
+    esac; 
+
+  next(flag[0]) :=
+    case
+      (p_id=0 & line=1) : TRUE;
+      (p_id=0 & line=5) : FALSE;
+      TRUE : flag[0];  -- not change it
+    esac;
+
+  next(flag[1]) :=
+    case
+      (p_id=1 & line=1) : TRUE;
+      (p_id=1 & line=5) : FALSE;
+      TRUE : flag[1];  -- not change it
+    esac;
+
+  -- Updating turn if it is on line 2
+  next(turn) :=
+    case
+      (line=2) : 1 - p_id;
+      TRUE: turn;
+    esac;
+-------------------------------------------------------------------------------
