@@ -30,6 +30,20 @@ ASSIGN
 -------------------------------------------------------------------------------
 
 ------------------------------- ALL CONSTRAINTS -------------------------------
+-- Processes must start infinitely often
+FAIRNESS p0.running = TRUE;
+FAIRNESS p1.running = TRUE;
+
+-- Processes cannot stay in critical section forever
+FAIRNESS (p0.line != 4);
+FAIRNESS (p1.line != 4);
+
+-- Processes cannot both enter critical section simultaneously
+CTLSPEC AG((p0.line != 4) | (p1.line != 4));
+
+-- Processes waiting to enter critical section must eventually do so
+CTLSPEC AG((p0.line=3) -> (AF(p0.line=4)));
+CTLSPEC AG((p1.line=3) -> (AF(p1.line=4)));
 -------------------------------------------------------------------------------
 
 ---------------------------------- PROCESS ------------------------------------
