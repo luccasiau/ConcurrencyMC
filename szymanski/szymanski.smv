@@ -1,0 +1,38 @@
+--------------------------------- INTRODUCTION ---------------------------------
+-- Szymanski's algorithm:
+-- Source: https://en.wikipedia.org/wiki/Szyma%C5%84ski%27s_algorithm# 
+--
+-- Global variables:
+-- -- flag: array of 0..4 initialized to {0, 0, 0, 0}  TODO: Check this.
+--
+-- Szymanski's lock process
+-- Process P_id
+-- -- 01: flag[p_id] := 1
+-- -- 02: if (max(flag[0], flag[1], flag[2], flag[3]) >= 3) goto 2
+-- -- 03: flag[p_id] := 3
+-- -- 04: if (flag[0] == 1 | flag[1] == 1 | flag[2] == 1 | flag[3] == 1):
+-- -- -- -- flag[p_id] = 2, goto 4
+-- -- 05: flag[p_id] := 4
+-- -- 06: // Await for everyone with lower id to finish exit protocol
+-- -- -- if (p_id > 0 & flag[0] > 1) | (p_id > 1 & flag[1] > 1) |
+-- -- -- -- (p_id > 2 & flag[2] > 1): goto 6
+-- -- 07: /* critical section */
+-- -- 08: if (p_id < 1 & (flag[1] == 2 | flag[1] == 3)) |
+-- -- -- -- (p_id < 2 & (flag[2] == 2 | flag[2] == 3)) |
+-- -- -- -- (p_id < 3 & (flag[3] == 2 | flag[3] == 3)): goto 8
+-- -- 09: flag[p_id] := 0
+-- -- 10: goto 1 (start process again)
+--------------------------------------------------------------------------------
+
+------------------------------------ MAIN --------------------------------------
+MODULE main
+VAR
+ASSIGN
+--------------------------------------------------------------------------------
+
+------------------------------- ALL CONSTRAINTS --------------------------------
+
+--------------------------------------------------------------------------------
+
+---------------------------------- PROCESS -------------------------------------
+--------------------------------------------------------------------------------
