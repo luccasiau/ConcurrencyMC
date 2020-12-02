@@ -56,7 +56,7 @@ FAIRNESS (p3.line != 9);
 -- No two processes can enter the critical section simultaneously
 CTLSPEC AG((p0.line != 9) | (p1.line != 9) | (p2.line != 9) | (p3.line != 9));
 
--- Avoid process starvation (Every process that starts reaches critical section
+-- Avoid process starvation (Every process that starts reaches critical section)
 CTLSPEC AG((p0.line=1) -> (AF(p0.line=9)));
 CTLSPEC AG((p1.line=1) -> (AF(p1.line=9)));
 CTLSPEC AG((p2.line=1) -> (AF(p2.line=9)));
@@ -89,10 +89,10 @@ ASSIGN
       -- exit protocol
       (line=10) & ((p_id<1 & (flag[1]=2 | flag[1]=3)) |
                    (p_id<2 & (flag[2]=2 | flag[2]=3)) |
-                   (p_id<3 & (flag[3]=2 | flag[2]=3))) : 10;
+                   (p_id<3 & (flag[3]=2 | flag[3]=3))) : 10;
       (line=10) : 11;
       (line=11) : {11, 12}; -- spend as much time as intended
-      (line=12) : 1; -- restart
+      (line=12) : 12; -- Gets stuck on the last line because it's done 
     esac;
 
   next(flag[p_id]) :=
