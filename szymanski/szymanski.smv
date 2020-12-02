@@ -11,23 +11,33 @@
 -- -- 02: if (max(flag[0], flag[1], flag[2], flag[3]) >= 3) goto 2
 -- -- 03: flag[p_id] := 3
 -- -- 04: if (flag[0] == 1 | flag[1] == 1 | flag[2] == 1 | flag[3] == 1):
--- -- -- -- flag[p_id] = 2, goto 4
--- -- 05: flag[p_id] := 4
--- -- 06: // Await for everyone with lower id to finish exit protocol
+-- -- -- -- 05: flag[p_id] = 2
+-- -- -- -- 06: if max(flag[0], flag[1], flag[2], flag[3]) <= 3): goto 6
+-- -- 07: flag[p_id] := 4
+-- -- 08: // Await for everyone with lower id to finish exit protocol
 -- -- -- if (p_id > 0 & flag[0] > 1) | (p_id > 1 & flag[1] > 1) |
--- -- -- -- (p_id > 2 & flag[2] > 1): goto 6
--- -- 07: /* critical section */
--- -- 08: if (p_id < 1 & (flag[1] == 2 | flag[1] == 3)) |
+-- -- -- -- (p_id > 2 & flag[2] > 1): goto 8
+-- -- 09: /* critical section */
+-- -- 10: if (p_id < 1 & (flag[1] == 2 | flag[1] == 3)) |
 -- -- -- -- (p_id < 2 & (flag[2] == 2 | flag[2] == 3)) |
--- -- -- -- (p_id < 3 & (flag[3] == 2 | flag[3] == 3)): goto 8
--- -- 09: flag[p_id] := 0
--- -- 10: goto 1 (start process again)
+-- -- -- -- (p_id < 3 & (flag[3] == 2 | flag[3] == 3)): goto 10
+-- -- 11: flag[p_id] := 0
+-- -- 12: goto 1 (start process again)
 --------------------------------------------------------------------------------
 
 ------------------------------------ MAIN --------------------------------------
 MODULE main
 VAR
+  flag: array 0..3 of 0..4;
+  p0: process szymanski(0, flag);
+  p1: process szymanski(1, flag);
+  p2: process szymanski(2, flag);
+  p3: process szymanski(3, flag);
 ASSIGN
+  init(flag[0]) := 0;
+  init(flag[1]) := 0;
+  init(flag[2]) := 0;
+  init(flag[3]) := 0;
 --------------------------------------------------------------------------------
 
 ------------------------------- ALL CONSTRAINTS --------------------------------
@@ -35,4 +45,43 @@ ASSIGN
 --------------------------------------------------------------------------------
 
 ---------------------------------- PROCESS -------------------------------------
+MODULE szymanski(p_id, flag)
+VAR
+  line: 1..12;
+ASSIGN
+  init(line) := 1;
+
+  next(line) :=
+    case
+      (line=1) : 2;
+      (line=2) & (max(flag[0], max(flag[1], max(flag[2], flag[3]))) >= 3): 2;
+      (line=2) : 3;
+      (line=4) & ((flag[0]=1) | (flag[1]=1) | (flag[2]=1) | (flag[3]=1)) : 5;
+      (line=4) : 7;
+      (line=5) : 6;
+      (line=6) & (max(flag[0], max(flag[1], max(flag[2], flag[3]))) <= 3) : 6;
+      (line=6) : 7;
+      (line=7) : 8;
+      (line=8) & ((p_id>0 & flag[0]>1) | (p_id>1 & flag[1]>1) |
+                  (p_id>2 & flag[2]>1)) : 8;
+      (line=8) : 9;
+      (line=9) : {9, 10}; -- spend as much time as intended in the crit. sec.
+      -- exit protocol
+      (line=10) & ((p_id<1 & (flag[1]=2 | flag[1]=3)) |
+                   (p_id<2 & (flag[2]=2 | flag[2]=3)) |
+                   (p_id<3 & (flag[3]=2 | flag[2]=3))) : 10;
+      (line=10) : 11;
+      (line=11) : {11, 12}; -- spend as much time as intended
+      (line=12) : 1; -- restart
+    esac;
+
+  next(flag[p_id]) :=
+    case
+      (line=1) : 1;
+      (line=3) : 3;
+      (line=5) : 2;
+      (line=7) : 4;
+      (line=11) : 0;
+      TRUE : flag[p_id]; -- not change it
+    esac;
 --------------------------------------------------------------------------------
