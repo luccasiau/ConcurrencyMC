@@ -1,0 +1,49 @@
+--------------------------------- INTRODUCTION ---------------------------------
+-- Sleeping-Barber problem:
+-- Source: https://en.wikipedia.org/wiki/Sleeping_barber_problem
+--
+-- Global variables:
+-- -- barberReady: boolean initialized to FALSE
+-- -- accessWRSeats: boolean initialize to TRUE
+-- -- custReady: 0..10 initialized to 0  FIXME: Investigate
+-- -- numberOfFreeWRSeats: 0..10 initialized to 0
+--
+-- Barber's process:
+-- -- 01: no-op  (for my own convenience)
+-- -- 02: if (custReady = 0): goto 2  (wait for customer)
+-- -- 03: if (accessWRSeats = TRUE): accessWRSeats := FALSE; else goto 3;
+-- -- -- -- attempts to grab lock
+-- -- 04: numberOfFreeWRSeats := numberOfFreeWRSeats + 1  (free one chair)
+-- -- 05: barberReady := TRUE
+-- -- 06: accessWRSeats := TRUE  (release lock)
+-- -- 07: (cut hair)
+-- -- 08: goto 1  (loopidy-doopity)
+-- -- 
+--
+-- Customer's process:
+-- -- 01: no-op (for my own convenience)
+-- -- 02: 
+--------------------------------------------------------------------------------
+
+------------------------------------ MAIN --------------------------------------
+MODULE main
+VAR
+  barberReady: boolean;
+  accessWRSeats: boolean;
+  custReady: 0..2;
+  numberOfFreeWRSeats: 0..2;
+  -- FIXME: The above numbers are limited to 2 for initial convenience in
+  -- reading the logs. I should update it to 10 once I'm more confident.
+  -- TODO: Add processes
+ASSIGN
+  init(barberReady) := FALSE;
+  init(accessWRSeats) := TRUE;
+  init(custReady) := 0;
+  init(numberOfFreeWRSeats) := 10;
+--------------------------------------------------------------------------------
+
+------------------------------- ALL CONSTRAINTS --------------------------------
+--------------------------------------------------------------------------------
+
+---------------------------------- PROCESS -------------------------------------
+--------------------------------------------------------------------------------
