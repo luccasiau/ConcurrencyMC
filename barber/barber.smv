@@ -49,6 +49,10 @@ VAR
   -- TODO: Add processes
   processBarber: process barber(barberReady, accessWRSeats, custReady, 
                                 numberOfFreeWRSeats);
+  processCustomer1: process customer(barberReady, accessWRSeats, custReady,
+                                     numberOfFreeWRSeats);
+  processCustomer2: process customer(barberReady, accessWRSeats, custReady,
+                                     numberOfFreeWRSeats);
 ASSIGN
   init(barberReady) := FALSE;
   init(accessWRSeats) := TRUE;
@@ -57,6 +61,25 @@ ASSIGN
 --------------------------------------------------------------------------------
 
 ------------------------------- ALL CONSTRAINTS --------------------------------
+-- Processes must run infinitely often.
+FAIRNESS processBarber.running = TRUE;
+FAIRNESS processCustomer1.running = TRUE;
+FAIRNESS processCustomer2.running = TRUE;
+
+-- Haircuts that start must eventually end
+FAIRNESS (processBarber.line != 7);
+FAIRNESS (processCustomer1.line != 8);
+FAIRNESS (processCustomer2.line != 8);
+
+-- If the barber is not cutting hair, then no customer can be with them
+-- TODO
+
+-- If the barber is cutting hair, then some customer must be with them.
+CTLSPEC AG((processBarber.line = 7) -> ((processCustomer1.line=8) |
+                                        (processCustomer2.line=8)))
+
+-- No two customers can have a haircut at the same time
+-- CTLSPEC AG((processCustomer1.line != 8) | (processCustomer2.line != 8));
 --------------------------------------------------------------------------------
 
 ---------------------------------- PROCESS -------------------------------------
@@ -110,7 +133,7 @@ ASSIGN
 
 MODULE customer(barberReady, accessWRSeats, custReady, numberOfFreeWRSeats)
 VAR
-  line: 1..12;
+  line: 1..11;
 ASSIGN
   init(line) := 1;
 
@@ -125,10 +148,10 @@ ASSIGN
       (line=5) : 6;
       (line=6) : 7;
       (line=7) : 8;
-      (line=8) : {8, 9};  -- getting a haircut and possibly chilling after
+      (line=8) : 9;  -- getting a haircut and possibly chilling after
       (line=9) : 11;
       (line=10) : 11;
-      (line=11) : 1;  -- loop to simulate several customers
+      (line=11) : {11, 1};  -- loop to simulate several customers
     esac;
 
   next(barberReady) :=
@@ -147,7 +170,7 @@ ASSIGN
 
   next(custReady) :=
     case
-      (line=5) : max(custReady + 1, 2);  -- FIXME: Increase limit.
+      (line=5) : min(custReady + 1, 2);  -- FIXME: Increase limit.
       TRUE : custReady; -- default
     esac;
 
