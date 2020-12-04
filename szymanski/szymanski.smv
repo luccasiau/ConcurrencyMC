@@ -54,8 +54,13 @@ FAIRNESS (p2.line != 9);
 FAIRNESS (p3.line != 9);
 
 -- No two processes can enter the critical section simultaneously
--- FIXME: This means that *not all* can access. Need to fix for *not two*.
-CTLSPEC AG((p0.line != 9) | (p1.line != 9) | (p2.line != 9) | (p3.line != 9));
+-- FIXME: There must be a better way to do this...
+CTLSPEC AG((p0.line != 9) | (p1.line != 9))
+CTLSPEC AG((p0.line != 9) | (p2.line != 9))
+CTLSPEC AG((p0.line != 9) | (p3.line != 9))
+CTLSPEC AG((p1.line != 9) | (p2.line != 9))
+CTLSPEC AG((p1.line != 9) | (p3.line != 9))
+CTLSPEC AG((p2.line != 9) | (p3.line != 9))
 
 -- Avoid process starvation (Every process that starts reaches critical section
 CTLSPEC AG((p0.line=1) -> (AF(p0.line=9)));
