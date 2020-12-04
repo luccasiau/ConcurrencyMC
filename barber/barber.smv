@@ -10,7 +10,7 @@
 --
 -- Barber's process:
 -- -- 01: no-op  (for my own convenience)
--- -- 02: if (custReady = 0): goto 2  (wait for customer)
+-- -- 02: if (custReady > 0): custReady -= 1; else goto 2  (wait for customer)
 -- -- 03: if (accessWRSeats = TRUE): accessWRSeats := FALSE; else goto 3;
 -- -- -- -- attempts to grab lock
 -- -- 04: numberOfFreeWRSeats := numberOfFreeWRSeats + 1  (free one chair)
@@ -22,7 +22,19 @@
 --
 -- Customer's process:
 -- -- 01: no-op (for my own convenience)
--- -- 02: 
+-- -- 02: if (accessWRSeats = TRUE): accessWRSeats := FALSE; else goto 2;
+-- -- -- attempts to grab lock
+-- -- 03: if numberOfFreeWRSeats > 0: goto 4; else goto 10;
+-- -- -- -- 04: numbersOfFreeWRSeats := numberOfFreeWRSeats - 1 
+-- -- -- -- 05: custReady := custReady + 1
+-- -- -- -- 06: accessWRSeats := TRUE (release lock)
+-- -- -- -- 07: if (barberReady = TRUE): barberReady := FALSE; else goto 7
+-- -- -- -- 08: (get haircut)
+-- -- -- -- TODO: Idea for deliberate bug: add a numberOfFreeWRSeats+=1 here.
+-- -- -- -- 09: goto 11
+-- -- else:
+-- -- -- -- 10: accessWRSeats := TRUE (release lock)
+-- -- 11: goto 1  (loop to simulate multiple customers)
 --------------------------------------------------------------------------------
 
 ------------------------------------ MAIN --------------------------------------
@@ -35,15 +47,113 @@ VAR
   -- FIXME: The above numbers are limited to 2 for initial convenience in
   -- reading the logs. I should update it to 10 once I'm more confident.
   -- TODO: Add processes
+  processBarber: process barber(barberReady, accessWRSeats, custReady, 
+                                numberOfFreeWRSeats);
 ASSIGN
   init(barberReady) := FALSE;
   init(accessWRSeats) := TRUE;
   init(custReady) := 0;
-  init(numberOfFreeWRSeats) := 10;
+  init(numberOfFreeWRSeats) := 2;  -- FIXME: Increase this later
 --------------------------------------------------------------------------------
 
 ------------------------------- ALL CONSTRAINTS --------------------------------
 --------------------------------------------------------------------------------
 
 ---------------------------------- PROCESS -------------------------------------
+MODULE barber(barberReady, accessWRSeats, custReady, numberOfFreeWRSeats)
+VAR
+  line: 1..8;
+ASSIGN
+  init(line) := 1;
+
+  next(line) :=
+    case
+      (line=1) : 2;
+      (line=2) & (custReady=0): 2;  -- sleep... zzzzzz...
+      (line=2) : 3;
+      (line=3) & (accessWRSeats=FALSE) : 3;  -- waiting for lock
+      (line=3) : 4;
+      (line=4) : 5;
+      (line=5) : 6;
+      (line=6) : 7;
+      (line=7) : {7, 8};  -- maybe cutting hair takes a long time
+      (line=8) : 1;  -- loop
+    esac;
+
+  next(barberReady) :=
+    case
+      (line=5) : TRUE;
+      TRUE : barberReady;  -- default
+    esac;
+
+  next(accessWRSeats) :=
+    case
+      (line=3) & (accessWRSeats=TRUE) : FALSE;
+      (line=6) : TRUE;  -- release lock
+      TRUE : accessWRSeats;  -- default
+    esac;
+
+  next(custReady) :=
+    case
+      (line=2) & (custReady > 0) : custReady - 1;
+      TRUE : custReady;  -- default
+    esac;
+
+  next(numberOfFreeWRSeats) :=
+    case
+      (line=4) : max(numberOfFreeWRSeats, 2); -- FIXME: Need to increase.
+      -- also, the process_model does not work without the max, even though,
+      -- in theory, it shouldn't be necessary to mod since the growth of the
+      -- variable is bounded.
+      TRUE : numberOfFreeWRSeats;  -- default
+    esac;
+
+MODULE customer(barberReady, accessWRSeats, custReady, numberOfFreeWRSeats)
+VAR
+  line: 1..12;
+ASSIGN
+  init(line) := 1;
+
+  next(line) :=
+    case
+      (line=1) : 2;
+      (line=2) & (accessWRSeats=FALSE) : 2;  -- wait for lock
+      (line=2) : 3;
+      (line=3) & (numberOfFreeWRSeats>0) : 4;
+      (line=3) : 10;
+      (line=4) : 5;
+      (line=5) : 6;
+      (line=6) : 7;
+      (line=7) : 8;
+      (line=8) : {8, 9};  -- getting a haircut and possibly chilling after
+      (line=9) : 11;
+      (line=10) : 11;
+      (line=11) : 1;  -- loop to simulate several customers
+    esac;
+
+  next(barberReady) :=
+    case
+      (line=7) & (barberReady=TRUE) : FALSE;
+      TRUE : barberReady; -- default
+    esac;
+
+  next(accessWRSeats) :=
+    case
+      (line=2) & (accessWRSeats=TRUE) : FALSE;
+      (line=6) : TRUE;
+      (line=10) : TRUE;
+      TRUE : accessWRSeats; -- default
+    esac;
+
+  next(custReady) :=
+    case
+      (line=5) : max(custReady + 1, 2);  -- FIXME: Increase limit.
+      TRUE : custReady; -- default
+    esac;
+
+  next(numberOfFreeWRSeats) :=
+    case
+      (line=4) : max(numberOfFreeWRSeats - 1, 0);  -- not necessary in theory.
+      TRUE : numberOfFreeWRSeats; -- default
+    esac;
 --------------------------------------------------------------------------------
