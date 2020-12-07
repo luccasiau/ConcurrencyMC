@@ -42,8 +42,8 @@ MODULE main
 VAR
   barberReady: boolean;
   accessWRSeats: boolean;
-  custReady: 0..2;
-  numberOfFreeWRSeats: 0..2;
+  custReady: 0..4;
+  numberOfFreeWRSeats: 0..4;
   -- FIXME: The above numbers are limited to 2 for initial convenience in
   -- reading the logs. I should update it to 10 once I'm more confident.
   -- TODO: Add processes
@@ -53,36 +53,68 @@ VAR
                                      numberOfFreeWRSeats);
   processCustomer2: process customer(barberReady, accessWRSeats, custReady,
                                      numberOfFreeWRSeats);
+  processCustomer3: process customer(barberReady, accessWRSeats, custReady,
+                                     numberOfFreeWRSeats);
+  processCustomer4: process customer(barberReady, accessWRSeats, custReady,
+                                     numberOfFreeWRSeats);
+  processCustomer5: process customer(barberReady, accessWRSeats, custReady,
+                                     numberOfFreeWRSeats);
 ASSIGN
   init(barberReady) := FALSE;
   init(accessWRSeats) := TRUE;
   init(custReady) := 0;
-  init(numberOfFreeWRSeats) := 2;  -- FIXME: Increase this later
+  init(numberOfFreeWRSeats) := 4;  -- FIXME: Increase this later
 --------------------------------------------------------------------------------
 
 ------------------------------- ALL CONSTRAINTS --------------------------------
--- Processes must run infinitely often.
+-- Processes must run infinitely often
 FAIRNESS processBarber.running = TRUE;
 FAIRNESS processCustomer1.running = TRUE;
 FAIRNESS processCustomer2.running = TRUE;
+FAIRNESS processCustomer3.running = TRUE;
+FAIRNESS processCustomer4.running = TRUE;
+FAIRNESS processCustomer5.running = TRUE;
 
 -- Haircuts that start must eventually end
 FAIRNESS (processBarber.line != 7);
 FAIRNESS (processCustomer1.line != 8);
 FAIRNESS (processCustomer2.line != 8);
+FAIRNESS (processCustomer3.line != 8);
+FAIRNESS (processCustomer4.line != 8);
+FAIRNESS (processCustomer5.line != 8);
 
--- If the barber is not cutting hair, then no customer can be with them
--- TODO
+-- Starvation: Every customer process gets a seat infinitely often? With this
+-- implementation, this constraint should fail.
+-- -- CTLSPEC AG(AF(processCustomer1.line=4));
+-- -- CTLSPEC AG(AF(processCustomer2.line=4));
+-- -- CTLSPEC AG(AF(processCustomer3.line=4));
+-- -- CTLSPEC AG(AF(processCustomer4.line=4));
+-- -- CTLSPEC AG(AF(processCustomer5.line=4));
+-- Negating the above specs so that we get something that is true.
+CTLSPEC EF(EG(processCustomer1.line != 4));
+CTLSPEC EF(EG(processCustomer2.line != 4));
+CTLSPEC EF(EG(processCustomer3.line != 4));
+CTLSPEC EF(EG(processCustomer4.line != 4));
+CTLSPEC EF(EG(processCustomer5.line != 4));
 
--- If the barber is cutting hair, then some customer must be with them.
-CTLSPEC AG((processBarber.line = 7) -> ((processCustomer1.line=8) |
-                                        (processCustomer2.line=8)))
-
--- No two customers can have a haircut at the same time
--- CTLSPEC AG((processCustomer1.line != 8) | (processCustomer2.line != 8));
+-- Starvation: Every customer that gets a seat must get a haircut. This is
+-- expected to fail in this implementation.
+-- -- CTLSPEC AG(processCustomer1.line=4->AF(processCustomer1.line=8));
+-- -- CTLSPEC AG(processCustomer2.line=4->AF(processCustomer2.line=8));
+-- -- CTLSPEC AG(processCustomer3.line=4->AF(processCustomer3.line=8));
+-- -- CTLSPEC AG(processCustomer4.line=4->AF(processCustomer4.line=8));
+-- -- CTLSPEC AG(processCustomer5.line=4->AF(processCustomer5.line=8));
+-- "Negating" the above specs so that we get something that is true. I'm
+-- changing the phrasing so that it means "process stuck in line 7 forever,"
+-- which is much cleaner.
+CTLSPEC EF(EG(processCustomer1.line=7));
+CTLSPEC EF(EG(processCustomer2.line=7));
+CTLSPEC EF(EG(processCustomer3.line=7));
+CTLSPEC EF(EG(processCustomer4.line=7));
+CTLSPEC EF(EG(processCustomer5.line=7));
 --------------------------------------------------------------------------------
 
----------------------------------- PROCESS -------------------------------------
+--------------------------------- PROCESSES ------------------------------------
 MODULE barber(barberReady, accessWRSeats, custReady, numberOfFreeWRSeats)
 VAR
   line: 1..8;
@@ -124,7 +156,7 @@ ASSIGN
 
   next(numberOfFreeWRSeats) :=
     case
-      (line=4) : max(numberOfFreeWRSeats, 2); -- FIXME: Need to increase.
+      (line=4) : max(numberOfFreeWRSeats, 4); -- FIXME: Need to increase.
       -- also, the process_model does not work without the max, even though,
       -- in theory, it shouldn't be necessary to mod since the growth of the
       -- variable is bounded.
@@ -147,6 +179,7 @@ ASSIGN
       (line=4) : 5;
       (line=5) : 6;
       (line=6) : 7;
+      (line=7) & (barberReady=FALSE) : 7;
       (line=7) : 8;
       (line=8) : 9;  -- getting a haircut and possibly chilling after
       (line=9) : 11;
@@ -170,7 +203,7 @@ ASSIGN
 
   next(custReady) :=
     case
-      (line=5) : min(custReady + 1, 2);  -- FIXME: Increase limit.
+      (line=5) : min(custReady + 1, 4);  -- FIXME: Increase limit.
       TRUE : custReady; -- default
     esac;
 
