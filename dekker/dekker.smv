@@ -1,0 +1,57 @@
+--------------------------------- INTRODUCTION ---------------------------------
+-- Dekker's Algorithm
+-- Source: https://en.wikipedia.org/wiki/Dekker%27s_algorithm
+--
+-- Global variables:
+-- -- wants_to_enter: boolean[2]; initialized to [FALSE, FALSE]
+-- -- turn: integer in [0..1], indicating priority; initialized to 0
+--
+-- Dekker's process p_id
+-- 01: wants_to_enter[p_id] := TRUE
+-- 02: if (wants_to_enter[1-p_id] = TRUE): (goto 03 else goto 08)
+-- -- 03: if (turn = (1-p_id)): (goto 04 else goto 07)
+-- -- -- 04: wants_to_enter[p_id] := FALSE
+-- -- -- 05: if (turn=(1-p_id)): goto 05 (busy wait);
+-- -- -- 06: wants_to_enter[p_id] := TRUE
+-- -- 07: goto 02
+-- 08: /* critical section */ 
+-- 09: turn := 1-p_id
+-- 10: wants_to_enter[p_id] := FALSE
+-- 11: goto 1 (restart)
+--------------------------------------------------------------------------------
+
+------------------------------------ MAIN --------------------------------------
+MODULE main
+VAR
+  wants_to_enter: array 0..1 of boolean;
+  turn: boolean;
+  -- TODO: Add processes
+ASSIGN
+  init(wants_to_enter[0]): FALSE;
+  init(wants_to_enter[1]): FALSE;
+  turn: FALSE;
+--------------------------------------------------------------------------------
+
+------------------------------- ALL CONSTRAINTS --------------------------------
+--------------------------------------------------------------------------------
+
+---------------------------------- PROCESS -------------------------------------
+MODULE dekker(p_id, wants_to_enter, turn):
+VAR
+  line: 1..10;
+ASSIGN
+  init(line) := 1;
+
+  next(line) :=
+    case
+    esac;
+
+  next(wants_to_enter[p_id]) :=
+    case
+      (line=1) : TRUE;
+      (line=4) : FALSE;
+      (line=6) : TRUE;
+      (line=10) : FALSE;
+      TRUE : wants_to_enter[p_id];
+    esac;
+--------------------------------------------------------------------------------
