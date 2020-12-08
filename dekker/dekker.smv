@@ -24,26 +24,64 @@
 MODULE main
 VAR
   wants_to_enter: array 0..1 of boolean;
-  turn: boolean;
-  -- TODO: Add processes
+  turn: 0..1;
+  p0: process dekker(0, wants_to_enter, turn);
+  p1: process dekker(1, wants_to_enter, turn);
 ASSIGN
-  init(wants_to_enter[0]): FALSE;
-  init(wants_to_enter[1]): FALSE;
-  turn: FALSE;
+  init(wants_to_enter[0]) := FALSE;
+  init(wants_to_enter[1]) := FALSE;
+  init(turn) := 0;
 --------------------------------------------------------------------------------
 
 ------------------------------- ALL CONSTRAINTS --------------------------------
+-- Fairness: Processes run infinitely often
+FAIRNESS p0.running = TRUE;
+FAIRNESS p1.running = TRUE;
+
+-- Fairness: Processes don't stay in the critical zone forever
+FAIRNESS p0.line != 8;
+FAIRNESS p1.line != 8;
+
+-- Spec: Processes cannot enter critical section simultaneously
+CTLSPEC AG((p0.line != 8) | (p1.line != 8))
+
+-- Spec: Processes enter critical section infinitely often
+CTLSPEC AG(AF(p0.line = 8));
+CTLSPEC AG(AF(p1.line = 8));
+
+-- Spec: Processes only enter critical section if it is their turn or the other
+-- does not want to enter the critical section.
+-- CTLSPEC AG((p0.line=8)->((turn=0) | (wants_to_enter[1]=FALSE)))
+-- CTLSPEC AG((p1.line=8)->((turn=1) | (wants_to_enter[0]=FALSE)))
+-- Update: Turns out this is not true; my intuition failed me. Hence, I shall
+-- negate the specs to "confirm" an example.
+CTLSPEC EF((p0.line=8)&(turn=1)&(wants_to_enter[1]=TRUE));
+CTLSPEC EF((p1.line=8)&(turn=0)&(wants_to_enter[0]=TRUE));
 --------------------------------------------------------------------------------
 
 ---------------------------------- PROCESS -------------------------------------
-MODULE dekker(p_id, wants_to_enter, turn):
+MODULE dekker(p_id, wants_to_enter, turn)
 VAR
-  line: 1..10;
+  line: 1..11;
 ASSIGN
   init(line) := 1;
 
   next(line) :=
     case
+      (line=1) : 2;
+      (line=2) & (wants_to_enter[1-p_id]=TRUE) : 3;
+      (line=2) : 8;
+      (line=3) & (turn=(1-p_id)) : 4;
+      (line=3) : 7;
+      (line=4) : 5;
+      (line=5) & (turn=(1-p_id)) : 5;
+      (line=5) : 6;
+      (line=6) : 7;
+      (line=7) : 2;
+      (line=8) : {8, 9};  -- critical zone
+      (line=9) : 10;
+      (line=10) : 11;
+      (line=11) : 1;
     esac;
 
   next(wants_to_enter[p_id]) :=
@@ -52,6 +90,12 @@ ASSIGN
       (line=4) : FALSE;
       (line=6) : TRUE;
       (line=10) : FALSE;
-      TRUE : wants_to_enter[p_id];
+      TRUE : wants_to_enter[p_id];  -- default
+    esac;
+
+  next(turn) :=
+    case
+      (line=9) : (1-p_id);
+      TRUE : turn;  -- default
     esac;
 --------------------------------------------------------------------------------
