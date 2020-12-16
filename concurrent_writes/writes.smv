@@ -1,0 +1,65 @@
+--------------------------------------------------------------------------------
+-- I'm trying to figure out how to simulate a concurrent write/read.
+-- The 'write' will be a module that looks like
+-- -- -- write(from, to)
+-- -- -- -- from: unsigned word[8]
+-- -- -- -- to: unsigned word[8]
+-- And it will write the value of 'from' to 'to' *bit by bit*. A process later
+-- can simulate concurrency in this. The writes will happen from least
+-- significant bit to most significant.
+-- I really need to figure out how to randomize the order of the write in the
+-- bits, but so far I've been lacking ideas.
+--
+-- A 'conventional read' does not exist. The assignment of var = value will be
+-- simulated with a write:
+-- -- -- write(value, var)
+-- And we will get the same properties as above. It will also be subject to the
+-- same writing order, which is from left to right.
+--------------------------------------------------------------------------------
+MODULE main
+VAR
+  var1: unsigned word[8];
+  var2: unsigned word[8];
+  --var1: array 0..1 of 0..1;
+  --var2: array 0..1 of 0..1;
+  write_p: process write(var1, var2);
+ASSIGN
+  init(var1) := 0d8_2;
+  init(var2) := 0d8_7;
+  --init(var1[0]) := 0;
+  --init(var1[1]) := 1;
+  --init(var2[0]) := 1;
+  --init(var2[1]) := 1;
+--------------------------------------------------------------------------------
+CTLSPEC AG((write_p.bit=8)->(var2=0d8_2));
+--------------------------------------------------------------------------------
+MODULE write(from, to)
+VAR
+  bit: 0..8;
+  -- A bit of 8 indicates the process is over. Should stay there. This will
+  -- lead to unfortunately many processes running at the same time.
+ASSIGN
+  init(bit) := 0;
+
+  next(bit) :=
+    case
+      (bit=8) : 8;
+      TRUE : bit+1;
+    esac;
+
+  -- The following is equivalent to next(to[bit]) := from[bit] if these could
+  -- be represented with arrays.
+  next(to) :=
+    case
+      (bit=0) : ((to & 0b_11111110) | (from & 0b_00000001));
+      (bit=1) : ((to & 0b_11111101) | (from & 0b_00000010));
+      (bit=2) : ((to & 0b_11111011) | (from & 0b_00000100));
+      (bit=3) : ((to & 0b_11110111) | (from & 0b_00001000));
+      (bit=4) : ((to & 0b_11101111) | (from & 0b_00010000));
+      (bit=5) : ((to & 0b_11011111) | (from & 0b_00100000));
+      (bit=6) : ((to & 0b_10111111) | (from & 0b_01000000));
+      (bit=7) : ((to & 0b_01111111) | (from & 0b_10000000));
+      TRUE : to;
+    esac;
+
+  next(from) := from;
